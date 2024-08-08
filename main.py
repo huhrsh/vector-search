@@ -3,14 +3,13 @@ start_time=time.time()
 from mongo_utils import search_doctors
 from textual_response import object_to_textual_response
 
-
 end_time = time.time()
 print(f"Time taken to ask for input: {end_time - start_time} seconds")
 query_sentence = input("Enter user prompt: ")
 start_time=time.time()
 # query_vector = get_vector(query_sentence)
 
-results = search_doctors(query_sentence)
+results = search_doctors(query_sentence,7)
 
 if results:
     print("Data received: ")

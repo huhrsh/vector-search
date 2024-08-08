@@ -1,43 +1,38 @@
-from transformers import pipeline
+import spacy
+from collections import Counter
 
-# Load the pre-trained QA model
-qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+nlp = spacy.load("en_core_web_sm")  # Replace with a larger model for better accuracy
 
 def extract_keywords(query):
-    context = (
-        "We have doctors specializing in various fields like Dermatology, Cardiology, etc. "
-        "They are located in different cities, including Los Angeles, New York, and more. "
-        "Doctors have different ratings, experience, and prices for their services. "
-    )
+    doc = nlp(query)
 
-    # Extract information from the query
-    location_answer = qa_pipeline(question="Where is the doctor located?", context=query)['answer']
-    specialization_answer = qa_pipeline(question="What is the specialization?", context=query)['answer']
-    rating_answer = qa_pipeline(question="What is the rating?", context=query)['answer']
-    price_answer = qa_pipeline(question="What is the price?", context=query)['answer']
-    
-    # Prepare filters and sorting criteria
+    # Extract named entities for potential filters
+    entities = [(entity.text, entity.label_) for entity in doc.ents]
+
+    # Extract keywords using spaCy's keyword extraction
+    keywords = [token.text for token in doc.noun_chunks]
+
+    print(f"keywords and entities are {keywords} and {entities}")
+    # Define filter and sorting keywords
+    filter_keywords = {"location": ["location", "city"],
+                      "specialization": ["specialization", "field"],
+                      "rating": ["rating", "stars"],
+                      "price": ["price", "cost"],
+                      "experience": ["experience", "years"]}
+    sort_keywords = {"highest": ["highest", "best"],
+                     "lowest": ["lowest", "worst"]}
+
+    # Create filter and sort dictionaries
     filter_by = {}
     sort_by = {}
-    
-    if location_answer:
-        filter_by['location'] = location_answer
-    if specialization_answer:
-        filter_by['specialization'] = specialization_answer
-    if 'rating' in query.lower():
-        if 'highest' in query.lower():
-            sort_by['rating'] = -1
-        elif 'lowest' in query.lower():
-            sort_by['rating'] = 1
-    if 'price' in query.lower():
-        if 'lowest' in query.lower():
-            sort_by['price'] = 1
-        elif 'highest' in query.lower():
-            sort_by['price'] = -1
-    if 'experience' in query.lower():
-        if 'most' in query.lower():
-            sort_by['experience'] = -1
-        elif 'least' in query.lower():
-            sort_by['experience'] = 1
-    
+
+    for keyword in keywords + [entity[0] for entity in entities]:
+        for filter_type, keywords_list in filter_keywords.items():
+            if keyword.lower() in keywords_list:
+                filter_by[filter_type] = keyword
+                break
+        for sort_type, keywords_list in sort_keywords.items():
+            if keyword.lower() in keywords_list:
+                sort_by[sort_type] = keyword
+
     return filter_by, sort_by
